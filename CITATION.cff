@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use this research compendium, please cite it as below."
+type: software
+title: "zzmesoimpute"
+version: 0.1.0
+date-released: "2026-06-25"
+license: GPL-3
+authors:
+  - family-names: Name
+    given-names: Your
+    orcid: ""
+    email: your.email@example.com
+    affiliation: Your Institution
+abstract: >
+  Reproducible research compendium created with zzcollab v2.4.0.
+  Contains all data, code, and computational environment needed to reproduce
+  the analyses.
+keywords:
+  - reproducible-research
+  - research-compendium
