@@ -1,0 +1,85 @@
+
+<!-- README.md is generated from README.Rmd. Please edit that file. -->
+
+# zzmesoimpute
+
+*2026-06-27 17:34 PDT*
+
+`zzmesoimpute` provides methods for imputing left-censored
+(below-limit-of-detection) concentrations from multiplexed immunoassays
+such as Meso Scale Discovery (MSD). Readings below an assay’s detection
+limit are not missing but left-censored: the true concentration is known
+only to lie in the interval from zero to a per-assay detection limit.
+The package implements a common interface across five imputation
+strategies so that the incumbent laboratory convention can be
+benchmarked against established censored-data methods.
+
+The methods are evaluated in a companion manuscript compendium,
+`zzmesoimputepaper`, which calibrates a simulation study to the
+censoring structure of an MSD panel.
+
+## Installation
+
+``` r
+# install.packages("remotes")
+remotes::install_github("rgt47/zzmesoimpute")
+```
+
+## Imputation strategies
+
+All imputation functions share the interface
+`impute_*(x, lod, censored, ...)`, where `x` is the concentration
+vector, `lod` is a single detection limit or one per observation, and
+`censored` is a logical vector marking below-detection readings
+(defaulting to `is.na(x)`).
+
+| Function | Strategy | Reference |
+|----|----|----|
+| `impute_substitution()` | Fixed fraction of the LOD (`fraction = 0.5` gives LOD/2; `1/sqrt(2)` gives LOD/sqrt(2)) | Hornung & Reed (1990) |
+| `impute_uniform()` | Uniform(0, LOD) draw, the incumbent MSD lab method | – |
+| `impute_ros()` | Regression on order statistics | Helsel (2012) |
+| `impute_mle()` | Censored-lognormal MLE conditional-mean imputation | Cohen (1959) |
+| `impute_mi_lognormal()` | Proper multiple imputation under a censored lognormal | Rubin (1987) |
+
+The single-imputation methods return a numeric vector the same length as
+`x`. `impute_mi_lognormal()` returns a list of `m` completed vectors, to
+be analysed separately and combined by Rubin’s rules.
+
+## Example
+
+``` r
+library(zzmesoimpute)
+
+# Six readings; two fall below a detection limit of 1.5.
+x        <- c(5.2, NA, 3.1, NA, 8.4, 2.7)
+censored <- is.na(x)
+
+# Single-imputation strategies return a numeric vector.
+impute_substitution(x, lod = 1.5, censored = censored, fraction = 0.5)
+#> [1] 5.20 0.75 3.10 0.75 8.40 2.70
+impute_uniform(x, lod = 1.5, censored = censored, seed = 1)
+#> [1] 5.2000000 0.3982630 3.1000000 0.5581858 8.4000000 2.7000000
+impute_mle(x, lod = 1.5, censored = censored)
+#> [1] 5.200000 0.948786 3.100000 0.948786 8.400000 2.700000
+
+# Multiple imputation returns m completed datasets.
+completions <- impute_mi_lognormal(x, lod = 1.5, censored = censored,
+                                   m = 5, seed = 1)
+length(completions)
+#> [1] 5
+completions[[1]]
+#> [1] 5.2000000 0.4833542 3.1000000 1.3511438 8.4000000 2.7000000
+```
+
+## Reading MSD exports
+
+`read_meso()` ingests a raw MSD plate-reader Excel export, locating the
+header block and mapping the vendor columns (detection range, calculated
+concentration, detection limit, exclusion flag) to tidy names suitable
+for the imputation functions. See `meso_default_map()` for the column
+mapping and `?read_meso` for details.
+
+## License
+
+GPL-3. See the companion manuscript for methodological background and a
+simulation-based comparison of the strategies.
