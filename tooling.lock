@@ -1,13 +1,13 @@
 {
-  "generated": "2026-06-25T23:26:02Z",
-  "r_version": "4.5.2",
-  "base_image_digest": null,
-  "ppm_snapshot": "2026-06-25",
+  "generated": "2026-07-06T00:28:08Z",
+  "r_version": "4.6.0",
+  "base_image_digest": "sha256:0b50fdee9288723b5a6802502341f0429ab05edb9db04d57958f49e18d3ea883",
+  "ppm_snapshot": "2026-07-05",
   "tools": {
     "zzrenvcheck": {
       "source": "github",
-      "ref": "rgt47/zzrenvcheck@v0.3.0",
-      "tag": "v0.3.0"
+      "ref": "rgt47/zzrenvcheck@v0.3.1",
+      "tag": "v0.3.1"
     }
   }
 }
