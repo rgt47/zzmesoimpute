@@ -9,6 +9,9 @@
 ^Dockerfile$
 ^\.dockerignore$
 ^\.devcontainer$
+^\.zzcollab$
+^\.zzcollab-state$
+^\.cache$
 ^CITATION\.cff$
 ^tooling\.lock$
 ^zzcollab\.yaml$
