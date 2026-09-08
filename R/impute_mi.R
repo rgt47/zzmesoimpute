@@ -8,7 +8,7 @@
 #' normal truncated above at `log(lod)`, back-transformed to the concentration
 #' scale. Detected observations are carried through unchanged.
 #'
-#' Analyse the `m` completions separately and combine with Rubin's rules to
+#' Analyze the `m` completions separately and combine with Rubin's rules to
 #' obtain inferences that reflect the missing-below-LOD information.
 #'
 #' @param x Numeric vector of concentrations. Censored entries may be

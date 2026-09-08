@@ -43,7 +43,7 @@ normal truncated above at \code{log(lod)}, back-transformed to the concentration
 scale. Detected observations are carried through unchanged.
 }
 \details{
-Analyse the \code{m} completions separately and combine with Rubin's rules to
+Analyze the \code{m} completions separately and combine with Rubin's rules to
 obtain inferences that reflect the missing-below-LOD information.
 }
 \examples{
