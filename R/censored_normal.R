@@ -46,18 +46,24 @@
 
 #' One draw from a multivariate normal
 #'
-#' Internal. Cholesky-based single draw; falls back to the mean if the
-#' covariance is not positive definite.
+#' Internal. Cholesky-based single draw.
+#'
+#' Returns `NULL` when the covariance is not positive definite, rather
+#' than returning the mean. Returning the mean would look like a draw
+#' while carrying no variability at all, which silently converts proper
+#' multiple imputation into improper: the caller must decide what to do
+#' and say so.
 #'
 #' @param mu Mean vector.
 #' @param sigma Covariance matrix.
-#' @return A numeric vector the length of `mu`.
+#' @return A numeric vector the length of `mu`, or `NULL` if `sigma` is
+#'   not positive definite.
 #' @keywords internal
 #' @noRd
 .rmvnorm1 <- function(mu, sigma) {
   ch <- tryCatch(chol(sigma), error = function(e) NULL)
   if (is.null(ch)) {
-    return(mu)
+    return(NULL)
   }
   as.numeric(mu + t(ch) %*% stats::rnorm(length(mu)))
 }

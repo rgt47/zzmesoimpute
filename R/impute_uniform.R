@@ -24,11 +24,15 @@
 #' @export
 impute_uniform <- function(x, lod, censored = is.na(x), seed = NULL) {
   lod <- .validate_censor_args(x, lod, censored)
-  if (!is.null(seed)) set.seed(seed)
   out <- as.numeric(x)
   n_cens <- sum(censored)
   if (n_cens > 0L) {
-    out[censored] <- stats::runif(n_cens, min = 0, max = lod[censored])
+    # Seeded inside .with_seed() so the caller's random stream is
+    # restored afterwards; set.seed() here would reposition it.
+    out[censored] <- .with_seed(
+      seed,
+      stats::runif(n_cens, min = 0, max = lod[censored])
+    )
   }
   out
 }

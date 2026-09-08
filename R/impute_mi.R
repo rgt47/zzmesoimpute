@@ -42,20 +42,41 @@ impute_mi_lognormal <- function(x, lod, censored = is.na(x), m = 20,
     stop("`m` must be a single positive integer.", call. = FALSE)
   }
   m <- as.integer(m)
-  if (!is.null(seed)) set.seed(seed)
   base <- as.numeric(x)
   if (!any(censored)) {
     return(replicate(m, base, simplify = FALSE))
   }
   fit <- .fit_censored_lognormal(x, lod, censored)
+  .check_fit(fit, "impute_mi_lognormal")
   cc <- log(lod[censored])
   k <- sum(censored)
-  use_unc <- isTRUE(param_uncertainty) && !is.null(fit$vcov)
+  use_unc <- isTRUE(param_uncertainty)
+  if (use_unc && is.null(fit$vcov)) {
+    # Falling back without saying so would hand back improper multiple
+    # imputation under the name of proper: the completions would share
+    # one parameter value, the between-imputation variance would omit
+    # estimation uncertainty, and Rubin's rules would then report
+    # intervals that are too narrow.
+    warning(
+      "impute_mi_lognormal(): the parameter covariance is not ",
+      "available, so estimation uncertainty cannot be propagated. ",
+      "Falling back to improper multiple imputation, conditioning on ",
+      "the MLE; Rubin's rules will understate the total variance.",
+      call. = FALSE
+    )
+    use_unc <- FALSE
+  }
 
+  .with_seed(seed, {
+  degenerate <- 0L
   draws <- vector("list", m)
   for (i in seq_len(m)) {
     if (use_unc) {
       par <- .rmvnorm1(fit$par, fit$vcov)
+      if (is.null(par)) {
+        degenerate <- degenerate + 1L
+        par <- fit$par
+      }
       mu <- par[1]
       s <- exp(par[2])
     } else {
@@ -68,5 +89,24 @@ impute_mi_lognormal <- function(x, lod, censored = is.na(x), m = 20,
     out[censored] <- exp(mu + s * stats::qnorm(u))
     draws[[i]] <- out
   }
+  if (degenerate > 0L) {
+    warning(
+      "impute_mi_lognormal(): the parameter covariance was not ",
+      "positive definite for ", degenerate, " of ", m,
+      " completions, which therefore condition on the MLE rather ",
+      "than drawing fresh parameters. Those completions contribute ",
+      "no estimation uncertainty.",
+      call. = FALSE
+    )
+  }
+  if (!all(vapply(draws, function(z) all(is.finite(z)), logical(1)))) {
+    stop(
+      "impute_mi_lognormal(): the fitted lognormal produced ",
+      "non-finite imputations. This follows a fit that did not ",
+      "converge; inspect the number of detected values.",
+      call. = FALSE
+    )
+  }
   draws
+  })
 }

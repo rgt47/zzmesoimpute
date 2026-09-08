@@ -40,12 +40,27 @@ impute_mle <- function(x, lod, censored = is.na(x)) {
     return(out)
   }
   fit <- .fit_censored_lognormal(x, lod, censored)
+  .check_fit(fit, "impute_mle")
   mu <- fit$mu
   s <- fit$sigma
   cc <- log(lod[censored])
   den <- pmax(stats::pnorm((cc - mu) / s), .Machine$double.eps)
   num <- stats::pnorm((cc - mu - s^2) / s)
   em <- exp(mu + s^2 / 2) * num / den
+  # exp(mu + s^2/2) overflows to Inf for the extreme parameter values a
+  # failed fit can return, and Inf * 0 is NaN. Returning that quietly
+  # would put NaN concentrations into an analysis; the floor on the
+  # denominator above already hides one degenerate case, so the result
+  # is checked rather than trusted.
+  if (!all(is.finite(em))) {
+    stop(
+      "impute_mle(): the fitted lognormal produced non-finite ",
+      "conditional means (mu = ", format(mu, digits = 4),
+      ", sigma = ", format(s, digits = 4), "). This follows a fit ",
+      "that did not converge; inspect the number of detected values.",
+      call. = FALSE
+    )
+  }
   out[censored] <- pmin(em, lod[censored])
   out
 }
