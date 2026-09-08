@@ -6,7 +6,7 @@
 #' are case-insensitive regular expressions** matched against the trimmed
 #' header labels of the export.
 #'
-#' The patterns are written to absorb the labelling differences seen across
+#' The patterns are written to absorb the labeling differences seen across
 #' MSD software versions, e.g. `Calc. Conc` vs `Calc. Concentration`,
 #' `Calc. Low` vs `Detection Limits: Calc. Low`, and `Standard Conc` vs
 #' `Standard Concentration`. Each pattern must match at most one header in a

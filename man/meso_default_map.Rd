@@ -17,7 +17,7 @@ are case-insensitive regular expressions} matched against the trimmed
 header labels of the export.
 }
 \details{
-The patterns are written to absorb the labelling differences seen across
+The patterns are written to absorb the labeling differences seen across
 MSD software versions, e.g. \verb{Calc. Conc} vs \verb{Calc. Concentration},
 \verb{Calc. Low} vs \verb{Detection Limits: Calc. Low}, and \verb{Standard Conc} vs
 \verb{Standard Concentration}. Each pattern must match at most one header in a

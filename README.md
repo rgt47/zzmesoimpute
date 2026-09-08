@@ -43,7 +43,7 @@ vector, `lod` is a single detection limit or one per observation, and
 
 The single-imputation methods return a numeric vector the same length as
 `x`. `impute_mi_lognormal()` returns a list of `m` completed vectors, to
-be analysed separately and combined by Rubin’s rules.
+be analyzed separately and combined by Rubin’s rules.
 
 ## Example
 
