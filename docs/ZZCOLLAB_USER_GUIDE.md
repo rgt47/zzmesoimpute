@@ -1,4 +1,4 @@
-<!-- zzcollab ZZCOLLAB_USER_GUIDE.md v2.4.0 -->
+<!-- zzcollab ZZCOLLAB_USER_GUIDE.md v0.3.0 -->
 # ZZCOLLAB User Guide
 
 ## Table of Contents
@@ -13,8 +13,9 @@
 8. [Build System with Make](#build-system-with-make)
 9. [Configuration System](#configuration-system)
 10. [GitHub Actions CI/CD](#github-actions-cicd)
-11. [Troubleshooting](#troubleshooting)
-12. [Platform-Specific Notes](#platform-specific-notes)
+11. [GitLab support](#gitlab-support)
+12. [Troubleshooting](#troubleshooting)
+13. [Platform-Specific Notes](#platform-specific-notes)
 
 ## What is ZZCOLLAB?
 
@@ -28,7 +29,7 @@ complete reproducibility.
 - Docker-based reproducibility with isolated computational environments
 - Two-layer architecture separating team infrastructure from
   individual package management
-- Three Docker profiles ranging from ~650 MB to ~1.2 GB
+- Four Docker profiles ranging from ~650 MB to ~4.2 GB
 - Pure-shell dependency validation (no host R required)
 - Automatic renv snapshot on container exit
 - Content-addressable Docker build caching
@@ -64,16 +65,19 @@ renv.lock + .Rprofile + source code + data.
 
 ```bash
 mkdir my-analysis && cd my-analysis
-zzc analysis                    # full setup with tidyverse
+zzc tidyverse                   # full setup with tidyverse
 make docker-build && make r     # build image, start R
 ```
+
+The `tidyverse` profile was formerly named `analysis`; `analysis` is retained
+as a deprecated alias, so `zzc analysis` still works.
 
 ### Team Lead
 
 ```bash
 zzc config set dockerhub-account mylab   # one-time config
 mkdir study && cd study
-zzc analysis                    # full setup
+zzc tidyverse                   # full setup
 zzc dockerhub                   # push image to Docker Hub
 zzc github                      # create GitHub repo and push
 ```
@@ -107,21 +111,27 @@ libraries, and R packages. Select one with `zzc <profile>`:
 | Profile | Base Image | Size | Use Case |
 |---------|-----------|------|----------|
 | `minimal` | rocker/r-ver | ~650 MB | Essential development (CLI only) |
-| `analysis` | rocker/tidyverse | ~1.2 GB | Data analysis with tidyverse |
+| `tidyverse` | rocker/tidyverse | ~1.2 GB | Data analysis with tidyverse |
 | `rstudio` | rocker/rstudio | ~980 MB | RStudio Server development |
+| `publishing` | rocker/verse | ~4.2 GB | Manuscript rendering (rmarkdown, bookdown, LaTeX) |
 
-For specialized environments, build from a base image instead of a
+The `tidyverse` profile was formerly named `analysis`; `analysis` is retained
+as a deprecated alias. The `publishing` profile is capability-adaptive: it
+renders PDF by default when a LaTeX toolchain is present and falls back to HTML
+otherwise. Its LaTeX package closure is pre-baked into the image at build time,
+so PDF rendering needs no runtime install.
+
+For other specialized environments, build from a base image instead of a
 profile (see [Custom Composition](#custom-composition)):
 
 | Environment | Base Image |
 |-------------|-----------|
-| LaTeX / Quarto publishing | rocker/verse base image |
 | Shiny web applications | rocker/shiny base image |
-| Machine learning | analysis profile + ML packages via renv |
+| Machine learning | tidyverse profile + ML packages via renv |
 
 ```bash
-zzc analysis                    # new project with tidyverse
-zzc docker --base-image rocker/verse   # LaTeX + Quarto environment
+zzc tidyverse                   # new project with tidyverse
+zzc publishing                  # manuscript rendering (PDF-adaptive)
 zzc list profiles               # show all profiles with descriptions
 ```
 
@@ -146,10 +156,6 @@ bundles a curated package set; the bundles below document those sets:
 |--------|----------|---------------|
 | `minimal` | renv, devtools, usethis, tinytest, roxygen2 | minimal |
 | `tidyverse` | renv, devtools, tidyverse, here | minimal |
-| `modeling` | tidyverse + tidymodels, xgboost, randomForest, glmnet, caret | modeling |
-| `publishing` | quarto, bookdown, blogdown, distill, flexdashboard, DT | publishing |
-| `shiny` | shiny, shinydashboard, shinyWidgets, DT, plotly, bslib | minimal |
-| `gui` | tidyverse + rgl, plotly, shiny, Cairo, svglite | gui |
 
 ```bash
 zzc list pkgs                   # show all package bundles
@@ -170,7 +176,7 @@ This eliminates manual library specification for most workflows.
 
 ## Project Structure
 
-Running `zzc analysis` in an empty directory creates the following:
+Running `zzc tidyverse` in an empty directory creates the following:
 
 ```
 myproject/
@@ -217,6 +223,23 @@ zzc docker                      # add Docker (Dockerfile)
 zzc git                         # initialize git repository
 zzc github                      # create GitHub repo and push
 ```
+
+### Feature Wizard
+
+`zzc init` runs a feature wizard whose checklist controls what is enabled at
+setup. Two checkboxes are relevant here:
+
+- **R language server in Docker image (in-container LSP)** -- default on,
+  backed by the `languageserver` config key. Because zzcollab assumes no R on
+  the host, the language server runs in the container, and a host editor (vim,
+  VS Code) bridges its LSP client into it. Untick for REPL-only workflows.
+- **Create remote now** -- default off. When ticked, the wizard creates the
+  forge remote as part of setup. The `auto_github` config key (default
+  `false`) pre-selects this checkbox; set it with
+  `zzc config set auto_github true`. The item is hidden when the forge is
+  `none`, the forge CLI is absent, or a confidential-repo guard denies remotes.
+  `zzc github` walks up to the repository root before creating the remote, so
+  it publishes the whole compendium rather than a subdirectory.
 
 ## Development Workflow
 
@@ -285,6 +308,18 @@ team members. Controlled by the team lead's profile choice.
 **Layer 2 (renv.lock):** Dynamic packages added by any team member
 inside the container. The lock file is the source of truth for
 reproducibility, not the Docker image.
+
+### Dependency Manifest: renv.lock + DESCRIPTION
+
+Reproducibility rests on two complementary files. `renv.lock` pins the exact
+package closure (versions); `DESCRIPTION` declares dependency roles. They are
+complementary, not redundant. Role convention: packages used by code in `R/`
+belong in `Imports`, and packages used only by `analysis/` (reports, scripts,
+notebooks) belong in `Suggests`. Run `make snapshot` to grow both from the
+built image, and see
+[docs/package-placement-whitepaper.md](docs/package-placement-whitepaper.md)
+for guidance on which packages belong in the Dockerfile versus `renv.lock`
+versus `DESCRIPTION`.
 
 ### Adding Packages
 
@@ -367,7 +402,7 @@ zzc config set github-account mylab
 
 # Create project
 mkdir genomics-study && cd genomics-study
-zzc analysis
+zzc tidyverse
 
 # Build and publish
 make docker-build
@@ -453,6 +488,20 @@ make docker-check-renv-fix      # renv::snapshot() in container
 make docker-rstudio             # start RStudio Server
 ```
 
+### Code Quality and Dependency Capture (in container)
+
+```bash
+make style                      # format R code with styler
+make lint                       # lint R code with lintr
+make snapshot                   # grow renv.lock + DESCRIPTION from image
+```
+
+`make style` and `make lint` require the code-quality feature (which installs
+`styler` and `lintr` in the image). `make snapshot` runs `renv::hydrate()`,
+`renv::snapshot(prompt = FALSE)`, and
+`zzrenvcheck::check_packages(auto_fix = TRUE, strict = TRUE)` in the container;
+run it before committing to capture code dependencies into the manifest.
+
 ### Native R (requires local R)
 
 ```bash
@@ -507,7 +556,7 @@ zzc config path                 # show config file paths
 zzc config init
 zzc config set dockerhub-account mylab
 zzc config set github-account myusername
-zzc config set profile-name analysis
+zzc config set profile-name tidyverse
 zzc config set author-name "Jane Doe"
 zzc config set author-email "jane@example.edu"
 ```
@@ -521,7 +570,10 @@ zzc config set author-email "jane@example.edu"
 **Docker:**
 `dockerhub-account`, `profile-name`, `r-version`,
 `docker-registry` (default: docker.io),
-`docker.platform` (default: linux/amd64)
+`docker.platform` (default: linux/amd64),
+`languageserver` (default: true) -- install the R language server in the
+Docker image for in-container LSP completion and diagnostics; set false for
+REPL-only workflows
 
 **GitHub:**
 `github-account`, `github-default-visibility` (default: private),
@@ -549,7 +601,7 @@ for a specific project:
 
 ```yaml
 defaults:
-  profile_name: analysis
+  profile_name: tidyverse
   dockerhub_account: mylab
   github_account: mylab
 
@@ -568,8 +620,12 @@ pull requests:
 1. Checks out code.
 2. Sets up R with `r-lib/actions`.
 3. Installs package dependencies.
-4. Runs `R CMD check --as-cran`.
-5. Calculates code coverage.
+4. Validates the dependency manifest (renv.lock + DESCRIPTION): a
+   'Validate dependency manifest (renv.lock + DESCRIPTION)' step runs
+   `zzrenvcheck::check_packages` and fails the build when code references a
+   package that is not declared in `DESCRIPTION` or not locked in `renv.lock`.
+5. Runs `R CMD check --as-cran`.
+6. Calculates code coverage.
 
 The workflow tests across a matrix of R versions and platforms
 (Ubuntu, macOS, Windows).
@@ -585,6 +641,45 @@ DOCKERHUB_TOKEN:    your-dockerhub-access-token
 ```
 
 Create an access token at https://hub.docker.com/settings/security.
+
+## GitLab support
+
+zzcollab supports GitLab as an alternative to GitHub. The active forge is
+a single choice, set once:
+
+```
+zzc config set forge gitlab
+zzc config set gitlab-account mylab
+zzc config set gitlab-host gitlab.example.edu   # self-hosted only
+```
+
+The forge can also be chosen interactively in `zzc toggle` (the forge
+picker), and is the first decision in the feature wizard.
+
+With `forge=gitlab`, the framework adapts as follows:
+
+- **CI**: a single `.gitlab-ci.yml` replaces the two GitHub Actions
+  workflows. It self-adapts to the backend (Nix flake, Docker, renv, or
+  DESCRIPTION) and runs a check stage and a path-filtered render stage,
+  mirroring the GitHub pipeline. Install or remove it with
+  `zzc add cicd` / `zzc rm cicd`, or via the `ci` feature in `zzc toggle`.
+- **Remote repository**: `zzc gitlab` (counterpart to `zzc github`) uses
+  the `glab` CLI to create the project and push, honouring `gitlab-host`
+  for self-hosted instances. Visibility is `--private` (default),
+  `--public`, or `--internal`.
+- **Container registry**: pushes default to the GitLab Container Registry
+  (`registry.gitlab.com`, or `registry.<host>` for self-hosted), whose CI
+  authentication is provided automatically by GitLab's `$CI_REGISTRY`
+  variables. Override with `zzc config set docker-registry <host>`. Push
+  with `zzc push` (the registry-aware command; `zzc dockerhub` is a
+  back-compat alias).
+- **Cloud launch**: `zzc cloud` installs a GitLab Workspaces devfile
+  (`.devfile.yaml`) instead of the Codespaces devcontainer. Force either
+  with `zzc cloud --platform workspace` or `--platform devcontainer`.
+
+GitLab integration requires the `glab` CLI for repository creation
+(`zzc gitlab`); CI, registry, and Workspaces configuration are generated
+without it.
 
 ## Troubleshooting
 
@@ -616,7 +711,7 @@ Solution: renv::restore() then renv::rebuild() if needed
 
 ```
 Error: No Dockerfile found - workspace not initialized
-Solution: Run zzc docker (or zzc analysis for full setup)
+Solution: Run zzc docker (or zzc tidyverse for full setup)
 ```
 
 ### Team Collaboration
@@ -651,11 +746,11 @@ Solution: make check-system-deps
 
 **AMD64-only profiles (run under emulation):**
 
-- `analysis` (rocker/tidyverse)
+- `tidyverse` (rocker/tidyverse)
+- `publishing` (rocker/verse)
 
 **Specialized base images (run under emulation on ARM64):**
 
-- rocker/verse base image (LaTeX / Quarto publishing)
 - rocker/shiny base image (Shiny applications)
 
 ZZCOLLAB automatically applies `--platform linux/amd64` when building
@@ -687,6 +782,7 @@ zzc github [--public|--private] # create GitHub repository
 zzc dockerhub [--tag TAG]       # push image to Docker Hub
 zzc validate [OPTIONS]          # check project structure
 zzc doctor [DIR] [--scan DIR]   # detect outdated templates
+zzc update [DIR] [--dry-run] [--force]  # regenerate managed files to current version
 zzc config <subcommand>         # configuration management
 zzc list [profiles|libs|pkgs]   # list available options
 zzc rm <feature> [-f]           # remove docker|renv|git|all

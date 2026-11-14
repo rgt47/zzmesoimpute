@@ -1,10 +1,28 @@
 # ==========================================
-# zzcollab .Rprofile v0.1.0
+# zzcollab .Rprofile v0.3.0
 # ==========================================
 # Part 1: User Personal Settings (from ~/.Rprofile)
 # Part 2: renv Activation + Reproducibility Options
 # Part 3: Auto-Snapshot on Exit
 # ==========================================
+
+# ==========================================
+# Root anchor
+# ==========================================
+# Every relative path below (renv/activate.R, renv.lock, DESCRIPTION,
+# .Rprofile.local) assumes the project root, and renv's activate.R takes
+# the project from getwd(). R only reads ./.Rprofile from the folder it
+# starts in, so in a subfolder this file is reached through R_PROFILE_USER
+# (set by 'make sh'). Run from the file's own folder, then restore the
+# starting directory at the end of the profile.
+.zz_start <- getwd()
+.zz_root <- local({
+  p <- Sys.getenv("R_PROFILE_USER")
+  if (nzchar(p) && file.exists(p)) dirname(normalizePath(p)) else .zz_start
+})
+if (!identical(normalizePath(.zz_root), normalizePath(.zz_start))) {
+  setwd(.zz_root)
+}
 
 # ==========================================
 # Part 1: User Personal Settings (always)
@@ -83,6 +101,17 @@ if (!renv_enabled) {
     Sys.setenv(RENV_PATHS_CACHE = file.path(Sys.getenv("HOME"), ".cache/R/renv"))
   }
 
+  # renv consent (skips first-time prompts)
+  # synchronized.check MUST be set before source("renv/activate.R"):
+  # renv runs the sync scan during load, so setting it after is too late.
+  # The scan of ~200 packages causes 20-30s startup overhead in the container.
+  options(
+    renv.consent = TRUE,
+    renv.config.install.prompt = FALSE,
+    renv.config.auto.snapshot = FALSE,
+    renv.config.synchronized.check = FALSE
+  )
+
   # Activate renv (set project-local library paths)
   if (file.exists("renv/activate.R")) {
     source("renv/activate.R")
@@ -103,18 +132,11 @@ if (!renv_enabled) {
     }
   }
 
-  # renv consent (skips first-time prompts)
-  options(
-    renv.consent = TRUE,
-    renv.config.install.prompt = FALSE,
-    renv.config.auto.snapshot = FALSE
-  )
-
   # Helper function for initializing renv without prompts
   renv_init_quiet <- function() {
     renv::init(
       bare = TRUE,
-      settings = list(snapshot.type = "implicit"),
+      settings = list(snapshot.type = "explicit"),
       force = TRUE,
       restart = FALSE,
       load = FALSE
@@ -208,7 +230,10 @@ if (!renv_enabled) {
           renv::snapshot(prompt = FALSE)
           TRUE
         }, error = function(e) {
-          warning("Auto-snapshot failed: ", conditionMessage(e), call. = FALSE)
+          msg <- conditionMessage(e)
+          if (!grepl("argument is of length zero|no packages", msg, ignore.case = TRUE)) {
+            warning("Auto-snapshot failed: ", msg, call. = FALSE)
+          }
           FALSE
         })
 
@@ -244,7 +269,14 @@ options(
 )
 
 # ==========================================
-# Part 4: Personal Customizations (always)
+# Part 4: zzvim-R code-submission helper (baseline)
+# ==========================================
+# .Rprofile.local overrides this with the cursor-erase version. This fallback
+# ensures code submission works if .Rprofile.local is absent or fails to load.
+.zz <- function(f) { source(f, echo = TRUE); unlink(f) }
+
+# ==========================================
+# Part 5: Personal Customizations (always)
 # ==========================================
 if (file.exists(".Rprofile.local")) {
   tryCatch(
@@ -254,3 +286,9 @@ if (file.exists(".Rprofile.local")) {
     }
   )
 }
+
+# Restore the starting directory (see "Root anchor" above).
+if (!identical(normalizePath(.zz_root), normalizePath(.zz_start))) {
+  setwd(.zz_start)
+}
+rm(.zz_start, .zz_root)
