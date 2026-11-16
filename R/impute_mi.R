@@ -22,7 +22,11 @@
 #'   for proper MI; if `FALSE`, condition on the MLE (improper MI).
 #'
 #' @return A list of length `m`, each element a numeric vector the length of
-#'   `x` with censored entries imputed and detected entries unchanged.
+#'   `x` with censored entries imputed and detected entries unchanged. An
+#'   error naming the fitted parameters is raised, rather than returning
+#'   completions, when any imputed value is non-finite or not strictly
+#'   positive (for example, exact zeros from `exp()` underflow at a
+#'   degenerate fit).
 #' @references Rubin, D. B. (1987). *Multiple Imputation for Nonresponse in
 #'   Surveys*. Wiley.
 #' @seealso [impute_mle()], [impute_ros()]
@@ -99,11 +103,23 @@ impute_mi_lognormal <- function(x, lod, censored = is.na(x), m = 20,
       call. = FALSE
     )
   }
-  if (!all(vapply(draws, function(z) all(is.finite(z)), logical(1)))) {
+  # A finiteness check alone misses exp() underflow: a degenerate fit
+  # (two identical detected values give mu = -727, sigma = 9e125)
+  # returns imputes of exactly 0, which is finite but lies outside
+  # (0, lod] and would enter a log-scale analysis as -Inf.
+  usable <- vapply(
+    draws,
+    function(z) all(is.finite(z)) && all(z[censored] > 0),
+    logical(1)
+  )
+  if (!all(usable)) {
     stop(
       "impute_mi_lognormal(): the fitted lognormal produced ",
-      "non-finite imputations. This follows a fit that did not ",
-      "converge; inspect the number of detected values.",
+      "non-finite or non-positive imputations (mu = ",
+      format(fit$mu, digits = 4), ", sigma = ",
+      format(fit$sigma, digits = 4), "). This follows a degenerate ",
+      "fit, usually one that did not converge; inspect the number of ",
+      "detected values.",
       call. = FALSE
     )
   }

@@ -21,7 +21,9 @@ observations. Defaults to \code{is.na(x)}.}
 }
 \value{
 A numeric vector the same length as \code{x}, with censored entries
-replaced by \code{lod * fraction} and observed entries unchanged.
+replaced by \code{lod * fraction} and observed entries unchanged. An error
+is raised if \code{lod * fraction} underflows to 0 (possible only for a
+subnormal \code{lod}).
 }
 \description{
 Replaces each left-censored observation with a fixed fraction of the limit

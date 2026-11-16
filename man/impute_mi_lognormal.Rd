@@ -31,7 +31,11 @@ for proper MI; if \code{FALSE}, condition on the MLE (improper MI).}
 }
 \value{
 A list of length \code{m}, each element a numeric vector the length of
-\code{x} with censored entries imputed and detected entries unchanged.
+\code{x} with censored entries imputed and detected entries unchanged. An
+error naming the fitted parameters is raised, rather than returning
+completions, when any imputed value is non-finite or not strictly
+positive (for example, exact zeros from \code{exp()} underflow at a
+degenerate fit).
 }
 \description{
 Fits a left-censored lognormal by maximum likelihood and draws \code{m} completed

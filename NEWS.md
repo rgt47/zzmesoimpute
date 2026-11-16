@@ -1,3 +1,27 @@
+# zzmesoimpute (development version)
+
+## Correctness fixes
+
+* **`impute_mi_lognormal()` could return imputed concentrations of
+  exactly 0.** The guard added in 0.2.0 rejected only non-finite
+  completions, but at a degenerate fit `exp()` underflows to 0, which
+  is finite. Two identical detected values, `impute_mi_lognormal(c(2,
+  2, NA, NA), lod = 1)`, returned three completions of `c(2, 2, 0, 0)`
+  with warnings only. An imputation below a positive limit must lie in
+  `(0, lod]`, so any non-finite or non-positive imputed value is now an
+  error naming the fitted `mu` and `sigma`, as in `impute_mle()`.
+
+* **The same zero-underflow check now applies to every strategy that
+  can produce a zero.** `impute_mle()` returned a conditional mean of
+  exactly 0, with no warning and from a converged fit, for a censored
+  observation whose own limit lies far below the fitted distribution;
+  it now errors. `impute_ros()` underflowed to 0 when the detected
+  values span hundreds of orders of magnitude; it now errors, naming
+  the fitted intercept and slope. `impute_substitution()` and
+  `impute_uniform()` reached 0 only with a subnormal `lod` and now
+  error in that case. Results on well-conditioned data are unchanged,
+  bit for bit, for a fixed seed.
+
 # zzmesoimpute 0.2.0
 
 ## Correctness fixes

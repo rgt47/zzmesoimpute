@@ -25,6 +25,8 @@
 #' @return A numeric vector the length of `x`. Censored entries are replaced by
 #'   ROS-fitted values (each below the detection limit), returned in ascending
 #'   order across the censored positions; detected entries are unchanged.
+#'   An error naming the fitted line is raised when any fitted value is
+#'   non-finite or not strictly positive.
 #' @references Helsel, D. R. and Cohn, T. A. (1988). Estimation of descriptive
 #'   statistics for multiply censored water quality data. *Water Resources
 #'   Research*, 24(12), 1997-2004.
@@ -67,6 +69,18 @@ impute_ros <- function(x, lod, censored = is.na(x)) {
   b <- coefs[2]
   pp_cen <- pe * (seq_len(k) - 0.5) / k
   fill <- exp(a + b * stats::qnorm(pp_cen))
+  # A steep fitted line (detected values spanning hundreds of orders of
+  # magnitude) makes exp() underflow to exactly 0, which is finite but
+  # outside (0, lod].
+  if (!all(is.finite(fill) & fill > 0)) {
+    stop(
+      "impute_ros(): the fitted ROS line produced non-finite or ",
+      "non-positive imputations (intercept = ", format(a, digits = 4),
+      ", slope = ", format(b, digits = 4), " on the log scale). ",
+      "Inspect the spread of the detected values.",
+      call. = FALSE
+    )
+  }
   fill <- pmin(fill, dl)
   out[which(censored)] <- fill
   out
