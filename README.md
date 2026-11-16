@@ -31,19 +31,25 @@ All imputation functions share the interface
 `impute_*(x, lod, censored, ...)`, where `x` is the concentration
 vector, `lod` is a single detection limit or one per observation, and
 `censored` is a logical vector marking below-detection readings
-(defaulting to `is.na(x)`).
+(defaulting to `is.na(x)`). `impute_ros()` requires a single detection
+limit among the censored observations and errors otherwise. The
+`is.na(x)` default treats every missing value as below detection; for
+MSD data, supply the explicit below-range indicator instead.
 
 | Function | Strategy | Reference |
 |----|----|----|
 | `impute_substitution()` | Fixed fraction of the LOD (`fraction = 0.5` gives LOD/2; `1/sqrt(2)` gives LOD/sqrt(2)) | Hornung & Reed (1990) |
 | `impute_uniform()` | Uniform(0, LOD) draw, the incumbent MSD lab method | – |
 | `impute_ros()` | Regression on order statistics | Helsel (2012) |
-| `impute_mle()` | Censored-lognormal MLE conditional-mean imputation | Cohen (1959) |
+| `impute_mle()` | Censored-lognormal MLE conditional-mean imputation | Helsel (2012) |
 | `impute_mi_lognormal()` | Proper multiple imputation under a censored lognormal | Rubin (1987) |
 
 The single-imputation methods return a numeric vector the same length as
 `x`. `impute_mi_lognormal()` returns a list of `m` completed vectors, to
-be analyzed separately and combined by Rubin’s rules.
+be analyzed separately and combined by Rubin’s rules. Every strategy
+raises an error, rather than returning a result, when any imputed value
+is non-finite or not strictly positive (for example, after a degenerate
+lognormal fit).
 
 ## Example
 
