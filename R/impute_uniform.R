@@ -17,7 +17,9 @@
 #'   before drawing so the imputation is reproducible.
 #'
 #' @return A numeric vector the same length as `x`, with censored entries
-#'   replaced by uniform draws and observed entries unchanged.
+#'   replaced by uniform draws and observed entries unchanged. An error is
+#'   raised if a draw underflows to 0 (possible only for a subnormal
+#'   `lod`).
 #' @examples
 #' x <- c(5.2, NA, 3.1, NA)
 #' impute_uniform(x, lod = 1.5, seed = 1)
@@ -33,6 +35,15 @@ impute_uniform <- function(x, lod, censored = is.na(x), seed = NULL) {
       seed,
       stats::runif(n_cens, min = 0, max = lod[censored])
     )
+    # runif() excludes 0, but scaling by a subnormal lod can underflow.
+    if (!all(out[censored] > 0)) {
+      stop(
+        "impute_uniform(): a uniform draw underflowed to 0 ",
+        "(smallest lod = ", format(min(lod[censored]), digits = 4),
+        "); imputations must lie in (0, lod].",
+        call. = FALSE
+      )
+    }
   }
   out
 }

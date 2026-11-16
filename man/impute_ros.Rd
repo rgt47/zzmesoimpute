@@ -20,6 +20,8 @@ to \code{is.na(x)}.}
 A numeric vector the length of \code{x}. Censored entries are replaced by
 ROS-fitted values (each below the detection limit), returned in ascending
 order across the censored positions; detected entries are unchanged.
+An error naming the fitted line is raised when any fitted value is
+non-finite or not strictly positive.
 }
 \description{
 Semiparametric lognormal ROS for a single detection limit. Detected values

@@ -21,6 +21,8 @@
 #'
 #' @return A numeric vector the length of `x`, censored entries replaced by
 #'   their conditional means (capped below `lod`), detected entries unchanged.
+#'   An error naming the fitted parameters is raised when any conditional
+#'   mean is non-finite or not strictly positive.
 #' @references
 #'   Helsel, D. R. (2012). *Statistics for Censored Environmental Data Using
 #'   Minitab and R* (2nd ed.). Wiley.
@@ -51,13 +53,18 @@ impute_mle <- function(x, lod, censored = is.na(x)) {
   # failed fit can return, and Inf * 0 is NaN. Returning that quietly
   # would put NaN concentrations into an analysis; the floor on the
   # denominator above already hides one degenerate case, so the result
-  # is checked rather than trusted.
-  if (!all(is.finite(em))) {
+  # is checked rather than trusted. The product can also underflow to
+  # exactly 0, which is finite but outside (0, lod]; this happens even
+  # for a converged fit when an observation's own limit lies far below
+  # the fitted distribution.
+  if (!all(is.finite(em) & em > 0)) {
     stop(
-      "impute_mle(): the fitted lognormal produced non-finite ",
-      "conditional means (mu = ", format(mu, digits = 4),
-      ", sigma = ", format(s, digits = 4), "). This follows a fit ",
-      "that did not converge; inspect the number of detected values.",
+      "impute_mle(): the fitted lognormal produced non-finite or ",
+      "non-positive conditional means (mu = ", format(mu, digits = 4),
+      ", sigma = ", format(s, digits = 4), "). This follows a ",
+      "degenerate fit, usually one that did not converge, or a limit ",
+      "of detection far below the fitted distribution; inspect the ",
+      "number of detected values and the limits.",
       call. = FALSE
     )
   }

@@ -22,7 +22,9 @@ before drawing so the imputation is reproducible.}
 }
 \value{
 A numeric vector the same length as \code{x}, with censored entries
-replaced by uniform draws and observed entries unchanged.
+replaced by uniform draws and observed entries unchanged. An error is
+raised if a draw underflows to 0 (possible only for a subnormal
+\code{lod}).
 }
 \description{
 Replaces each left-censored observation with an independent draw from a

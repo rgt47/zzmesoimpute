@@ -18,6 +18,8 @@ to \code{is.na(x)}.}
 \value{
 A numeric vector the length of \code{x}, censored entries replaced by
 their conditional means (capped below \code{lod}), detected entries unchanged.
+An error naming the fitted parameters is raised when any conditional
+mean is non-finite or not strictly positive.
 }
 \description{
 Fits a left-censored lognormal by maximum likelihood (internal helper

@@ -16,7 +16,9 @@
 #'   `0.5` (LOD/2).
 #'
 #' @return A numeric vector the same length as `x`, with censored entries
-#'   replaced by `lod * fraction` and observed entries unchanged.
+#'   replaced by `lod * fraction` and observed entries unchanged. An error
+#'   is raised if `lod * fraction` underflows to 0 (possible only for a
+#'   subnormal `lod`).
 #' @examples
 #' x <- c(5.2, NA, 3.1, NA)
 #' impute_substitution(x, lod = 1.5)
@@ -30,5 +32,14 @@ impute_substitution <- function(x, lod, censored = is.na(x), fraction = 0.5) {
   lod <- .validate_censor_args(x, lod, censored)
   out <- as.numeric(x)
   out[censored] <- lod[censored] * fraction
+  # Only a subnormal lod can reach this: the product underflows to 0.
+  if (!all(out[censored] > 0)) {
+    stop(
+      "impute_substitution(): `lod * fraction` underflowed to 0 ",
+      "(smallest lod = ", format(min(lod[censored]), digits = 4),
+      "); imputations must lie in (0, lod].",
+      call. = FALSE
+    )
+  }
   out
 }
